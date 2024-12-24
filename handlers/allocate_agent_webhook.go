@@ -69,27 +69,52 @@ func (h *AllocateAgentHandler) AllocateAgentWebhook(c echo.Context) error {
 	}
 
 	agentCurrentLoad := resp.Data.Agent.Count
-	if agentCurrentLoad >= config.AGENT_DEFAULT_MAX_LOAD {
-		log.Printf("[Allocate Agent Webhook] Agent full. Queueing...")
+	maxLoad, err := h.AgentService.GetAgentMaxLoad(uint(resp.Data.Agent.ID))
+	if err != nil {
+		log.Printf("[Allocate Agent Webhook] Error getting agent max load: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to get agent max load"})
+	}
+
+	if agentCurrentLoad >= maxLoad {
+		log.Printf("[Allocate Agent Webhook] Agent load exceeds max (%d). Queueing...", maxLoad)
 		return c.JSON(http.StatusOK, map[string]string{"message": "Customer queued successfully"})
+	} else {
+		log.Printf("[Allocate Agent Webhook] Agent load is under max (%d). Assigning agent...", maxLoad)
 	}
 
-	_, err = h.QiscusService.AssignAgent(payload.RoomID, uint(resp.Data.Agent.ID))
-	if err != nil {
-		log.Printf("[Allocate Agent Webhook] Error assigning agent to customer: %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to assign agent to customer"})
-	}
+	for agentCurrentLoad < maxLoad {
+		queueExists, err := h.QueueService.DoesQueueExists(config.REDIS_QUEUE_CUSTOMERS_KEY)
+		if err != nil {
+			log.Printf("[Allocate Agent Webhook] Error checking queue existence: %v", err)
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to check queue existence"})
+		}
 
-	_, err = h.QueueService.DequeueCustomer(config.REDIS_QUEUE_CUSTOMERS_KEY)
-	if err != nil {
-		log.Printf("[Allocate Agent Webhook] Error queuing customer: %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to queue customer"})
-	}
+		if !queueExists {
+			log.Println("[Allocate Agent Webhook] Queue no longer exists. Exiting.")
+			break
+		}
 
-	err = h.AgentService.IncreaseAgentCurrentLoad(uint(resp.Data.Agent.ID))
-	if err != nil {
-		log.Printf("[Allocate Agent Webhook] Error increasing agent current load: %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to increase agent current load"})
+		nextRoomId, err := h.QueueService.DequeueCustomer(config.REDIS_QUEUE_CUSTOMERS_KEY)
+		if err != nil {
+			log.Printf("[Allocate Agent Webhook] Error dequeuing customer: %v", err)
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to dequeue customer"})
+		}
+
+		log.Printf("[Allocate Agent Webhook] Assigning room ID '%s' to agent ID '%d'", nextRoomId, resp.Data.Agent.ID)
+
+		_, err = h.QiscusService.AssignAgent(nextRoomId, uint(resp.Data.Agent.ID))
+		if err != nil {
+			log.Printf("[Allocate Agent Webhook] Error assigning agent to customer: %v", err)
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to assign agent to customer"})
+		}
+
+		err = h.AgentService.IncreaseAgentCurrentLoad(uint(resp.Data.Agent.ID))
+		if err != nil {
+			log.Printf("[Allocate Agent Webhook] Error increasing agent current load: %v", err)
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to increase agent current load"})
+		}
+
+		agentCurrentLoad++
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{"message": "Customer queued successfully"})

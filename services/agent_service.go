@@ -33,10 +33,10 @@ func (s *AgentService) DoesAgentExist(id uint) (bool, error) {
 
 func (s *AgentService) AddAgent(id uint, name string, currentLoad int, maxLoad int) error {
 	agent := models.Agent{
-		ID:        id,
-		Name:      name,
+		ID:          id,
+		Name:        name,
 		CurrentLoad: currentLoad,
-		MaxLoad:   maxLoad,
+		MaxLoad:     maxLoad,
 	}
 
 	if err := s.DB.Create(&agent).Error; err != nil {
@@ -89,19 +89,15 @@ func (s *AgentService) DecreaseAgentCurrentLoad(agentID uint) error {
 	return nil
 }
 
-func (s *AgentService) CheckAgentLoadExceedsMax(agentID uint) (bool, error) {
+func (s *AgentService) GetAgentMaxLoad(agentID uint) (int, error) {
 	var agent models.Agent
 
 	if err := s.DB.First(&agent, agentID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return false, fmt.Errorf("agent with ID %d not found", agentID)
+			return 0, fmt.Errorf("agent with ID %d not found", agentID)
 		}
-		return false, fmt.Errorf("failed to fetch agent: %w", err)
+		return 0, fmt.Errorf("failed to fetch agent: %w", err)
 	}
 
-	if agent.CurrentLoad >= agent.MaxLoad {
-		return true, nil
-	}
-
-	return false, nil
+	return agent.MaxLoad, nil
 }
