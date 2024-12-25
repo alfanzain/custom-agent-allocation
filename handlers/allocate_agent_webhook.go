@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/alfanzain/custom-agent-allocation/config"
 	"github.com/alfanzain/custom-agent-allocation/services"
@@ -115,6 +116,8 @@ func (h *AllocateAgentHandler) AllocateAgentWebhook(c echo.Context) error {
 		}
 
 		agentCurrentLoad++
+
+		time.Sleep(2 * time.Second)
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{"message": "Customer queued successfully"})
