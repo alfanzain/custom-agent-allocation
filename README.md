@@ -1,4 +1,4 @@
-# Custom Agent Allocation Service
+# Qiscus Custom Agent Allocation Service
 
 This repository contains the source code for a custom agent allocation service built using Go, PostgreSQL, and Redis.  This service manages the allocation of agents to customers based on availability and load.
 
