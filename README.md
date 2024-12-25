@@ -24,12 +24,12 @@ This repository contains the source code for a custom agent allocation service b
 
 ## Technologies Used
 
-* **Go:**  [Version:  Insert Go version here](https://go.dev/)
-* **PostgreSQL:** [Version: Insert PostgreSQL version here](https://www.postgresql.org/)  Used for persistent storage of agent data.
-* **Redis:** [Version: Insert Redis version here](https://redis.io/) Used for queuing incoming customer requests.
-* **Echo Framework:**  [Version: Insert Echo Framework version here](https://echo.labstack.com/) Used for building the web server.
-* **GORM:** [Version: Insert GORM version here](https://gorm.io/)  ORM for interacting with PostgreSQL.
-* **go-redis:** [Version: Insert go-redis version here](https://github.com/go-redis/redis) Client for interacting with Redis.
+* **Go** 
+* **PostgreSQL** Used for persistent storage of agent data.
+* **Redis** Used for queuing incoming customer requests.
+* **Echo Framework** Used for building the web server.
+* **GORM** ORM for interacting with PostgreSQL.
+* **go-redis** Client for interacting with Redis.
 
 
 ## Architecture
